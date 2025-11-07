@@ -98,18 +98,27 @@
     </div>
 
     <!-- Charts -->
-    <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-6">
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
       <div class="bg-white rounded-lg shadow p-6 lg:col-span-2">
         <h3 class="text-lg font-semibold text-gray-900 mb-4">Trạng thái đơn hàng</h3>
         <div class="chart-container">
-          <canvas id="statusPie" style="transform: translateX(30%)"></canvas>
+          <canvas id="statusPie"></canvas>
         </div>
       </div>
 
-      <div class="bg-white rounded-lg shadow p-6 lg:col-span-3">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">Doanh thu theo khách hàng (Triệu VNĐ)</h3>
-        <div class="chart-container">
-          <canvas id="revenueBar"></canvas>
+      <div class="bg-white rounded-lg shadow p-6 lg:col-span-2">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Thống kê chi tiết</h3>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Chỉ số</th>
+                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Giá trị</th>
+              </tr>
+            </thead>
+            <tbody id="statsTable" class="bg-white divide-y divide-gray-200">
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -455,61 +464,80 @@
       }
     });
 
-    // Pie chart
+    // Stats table
+    const totalItems = orderDetails.filter(d => filteredOrders.map(o => o.id).includes(d.orderId)).length;
+    const totalAmount = filteredOrders.reduce((sum, o) => sum + o.amount, 0);
+    const totalDebt = filteredOrders.reduce((sum, o) => sum + (o.amount - o.paid), 0);
+    
+    const statsTable = document.getElementById('statsTable');
+    statsTable.innerHTML = `
+      <tr class="hover:bg-gray-50">
+        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Số lượng hàng</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">${totalItems}</td>
+      </tr>
+      <tr class="hover:bg-gray-50">
+        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Tổng tiền</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">${formatCurrency(totalAmount)}</td>
+      </tr>
+      <tr class="hover:bg-gray-50">
+        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Số công nợ</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">${formatCurrency(totalDebt)}</td>
+      </tr>
+    `;
+
+    // Pie chart with percentages and incomplete orders
+    const totalOrders = filteredOrders.length;
     const statusCounts = {
-      'Hoàn tất': filteredOrders.filter(o=>o.status==='Hoàn tất').length,
-      'Đang vận chuyển': filteredOrders.filter(o=>o.status==='Đang vận chuyển').length,
-      'Chờ xử lý': filteredOrders.filter(o=>o.status==='Chờ xử lý').length
+      'Hoàn tất': filteredOrders.filter(o => o.status === 'Hoàn tất').length,
+      'Đang vận chuyển': filteredOrders.filter(o => o.status === 'Đang vận chuyển').length,
+      'Chờ xử lý': filteredOrders.filter(o => o.status === 'Chờ xử lý').length,
+      'Đơn chưa hoàn tất': filteredOrders.filter(o => o.status !== 'Hoàn tất').length
     };
+
     const statusColors = {
       'Hoàn tất': '#10b981',
       'Đang vận chuyển': '#3b82f6',
-      'Chờ xử lý': '#f59e0b'
+      'Chờ xử lý': '#f59e0b',
+      'Đơn chưa hoàn tất': '#ef4444'
     };
+
+    // Calculate percentages for labels
+    const statusLabelsWithPercentages = Object.entries(statusCounts).map(([status, count]) => {
+      const percentage = ((count / totalOrders) * 100).toFixed(1);
+      return `${status} (${percentage}%)`;
+    });
+
     const statusCtx = document.getElementById('statusPie').getContext('2d');
     if (statusPie) statusPie.destroy();
     statusPie = new Chart(statusCtx, {
       type: 'pie',
       data: {
-        labels: Object.keys(statusCounts),
+        labels: statusLabelsWithPercentages,
         datasets: [{
           data: Object.values(statusCounts),
           backgroundColor: Object.keys(statusCounts).map(k => statusColors[k])
         }]
       },
       options: {
-        plugins: { legend: { position: 'bottom' } }
-      }
-    });
-
-    // Revenue bar chart - by customer (in million VND)
-    // Recompute customer stats from filteredOrders
-    const customerStats = {};
-    filteredOrders.forEach(o => {
-      if (!customerStats[o.customer]) {
-        customerStats[o.customer] = { name: o.customer, totalPaid: 0, debt: 0, totalAmount: 0 };
-      }
-      customerStats[o.customer].totalPaid += o.paid;
-      customerStats[o.customer].debt += (o.amount - o.paid);
-      customerStats[o.customer].totalAmount += o.amount;
-    });
-    const revenueData = Object.values(customerStats).map(c => ({ name: c.name.length>20?c.name.slice(0,20)+'...':c.name, paid: c.totalPaid/1000000, debt: c.debt/1000000 }));
-    const revenueCtx = document.getElementById('revenueBar').getContext('2d');
-    if (revenueBar) revenueBar.destroy();
-    revenueBar = new Chart(revenueCtx, {
-      type: 'bar',
-      data: {
-        labels: revenueData.map(r=>r.name),
-        datasets: [
-          { label: 'Đã thu (M)', data: revenueData.map(r=>r.paid), backgroundColor: '#10b981' },
-          { label: 'Công nợ (M)', data: revenueData.map(r=>r.debt), backgroundColor: '#ef4444' }
-        ]
-      },
-      options: {
-        indexAxis: 'x',
-        plugins: { legend: { position: 'bottom' } },
-        scales: {
-          y: { beginAtZero: true }
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              padding: 20
+            }
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const value = context.raw;
+                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                const percentage = ((value / total) * 100).toFixed(1);
+                return `${context.label.split(' (')[0]}: ${value} đơn (${percentage}%)`;
+              }
+            }
+          }
         }
       }
     });
