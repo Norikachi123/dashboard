@@ -165,8 +165,11 @@
           <h3 class="text-lg font-semibold text-gray-900 mb-4">
             Trạng thái đơn hàng
           </h3>
-          <div class="chart-container">
-            <canvas id="statusPie"></canvas>
+          <div class="chart-container flex items-start">
+            <div class="w-2/3">
+              <canvas id="statusPie"></canvas>
+            </div>
+            <div id="statusLegend" class="w-1/3 pl-4"></div>
           </div>
         </div>
       </div>
@@ -964,13 +967,8 @@
           "Đơn chưa hoàn tất": "#ef4444",
         };
 
-        // Calculate percentages for labels
-        const statusLabelsWithPercentages = Object.entries(statusCounts).map(
-          ([status, count]) => {
-            const percentage = ((count / totalOrders) * 100).toFixed(1);
-            return `${status}: ${count} đơn`;
-          }
-        );
+        // Build pie chart and an external legend so counts ('... đơn') align vertically
+        const statusLabels = Object.keys(statusCounts);
 
         const statusCtx = document.getElementById("statusPie").getContext("2d");
         // Plugin to draw percentages inside pie slices
@@ -989,7 +987,6 @@
             meta.data.forEach((arc, i) => {
               const value = dataset.data[i];
               if (!value || total === 0) return;
-              // mid angle
               const start = arc.startAngle;
               const end = arc.endAngle;
               const mid = (start + end) / 2;
@@ -997,9 +994,8 @@
               const x = arc.x + Math.cos(mid) * r;
               const y = arc.y + Math.sin(mid) * r;
               const percent = ((value / total) * 100).toFixed(1) + '%';
-              // If slice is too small, skip drawing to avoid overlap
               const sliceAngle = end - start;
-              if (sliceAngle < 0.25) return; // ~14 degrees
+              if (sliceAngle < 0.25) return; // skip very small slices
               ctx.fillText(percent, x, y);
             });
             ctx.restore();
@@ -1010,50 +1006,56 @@
         statusPie = new Chart(statusCtx, {
           type: "pie",
           data: {
-            labels: statusLabelsWithPercentages,
+            labels: statusLabels,
             datasets: [
               {
                 data: Object.values(statusCounts),
-                backgroundColor: Object.keys(statusCounts).map(
-                  (k) => statusColors[k]
-                ),
+                backgroundColor: Object.keys(statusCounts).map((k) => statusColors[k]),
               },
             ],
           },
           options: {
             responsive: true,
             maintainAspectRatio: false,
-            layout: {
-              padding: {
-                right: 10
-              }
-            },
+            layout: { padding: { right: 0 } },
             plugins: {
-              legend: {
-                position: "right",
-                align: 'center',
-                labels: {
-                  padding: 10,
-                },
-              },
+              // hide built-in legend; we'll render an external legend beside the pie
+              legend: { display: false },
               tooltip: {
                 callbacks: {
                   label: function (context) {
                     const value = context.raw;
-                    const total = context.dataset.data.reduce(
-                      (a, b) => a + b,
-                      0
-                    );
+                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
                     const percentage = ((value / total) * 100).toFixed(1);
-                    return `${
-                      context.label.split(" (")[0]
-                    }: ${value} đơn (${percentage}%)`;
+                    return `${context.label}: ${value} đơn`;
                   },
                 },
               },
             },
           },
           plugins: [piePercentPlugin]
+        });
+
+        // Build an external legend next to the pie, using CSS grid so counts align vertically
+        const legendContainer = document.getElementById('statusLegend');
+        legendContainer.innerHTML = '';
+        Object.entries(statusCounts).forEach(([status, count]) => {
+          const percent = totalOrders === 0 ? '0.0' : ((count / totalOrders) * 100).toFixed(1);
+          const color = statusColors[status] || '#ccc';
+          const row = document.createElement('div');
+          row.style.display = 'grid';
+          row.style.gridTemplateColumns = '1fr auto';
+          row.style.gap = '8px';
+          row.style.alignItems = 'center';
+          row.className = 'py-1';
+          row.innerHTML = `
+            <div style="display:flex;align-items:center;">
+              <span style="width:14px;height:12px;background:${color};display:inline-block;border-radius:3px;margin-right:8px;"></span>
+              <span class="text-sm text-gray-700">${status}</span>
+            </div>
+            <div style="text-align:right;"><span class="text-sm text-gray-700">${count} đơn</span></div>
+          `;
+          legendContainer.appendChild(row);
         });
       }
 
