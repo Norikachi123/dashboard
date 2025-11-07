@@ -968,11 +968,44 @@
         const statusLabelsWithPercentages = Object.entries(statusCounts).map(
           ([status, count]) => {
             const percentage = ((count / totalOrders) * 100).toFixed(1);
-            return `${status} (${percentage}%)`;
+            return `${status}: ${count} đơn`;
           }
         );
 
         const statusCtx = document.getElementById("statusPie").getContext("2d");
+        // Plugin to draw percentages inside pie slices
+        const piePercentPlugin = {
+          id: 'piePercentPlugin',
+          afterDraw: (chart) => {
+            const ctx = chart.ctx;
+            const dataset = chart.data.datasets[0];
+            const meta = chart.getDatasetMeta(0);
+            const total = dataset.data.reduce((a, b) => a + b, 0);
+            ctx.save();
+            ctx.font = 'bold 12px Arial';
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            meta.data.forEach((arc, i) => {
+              const value = dataset.data[i];
+              if (!value || total === 0) return;
+              // mid angle
+              const start = arc.startAngle;
+              const end = arc.endAngle;
+              const mid = (start + end) / 2;
+              const r = (arc.outerRadius + arc.innerRadius) / 2;
+              const x = arc.x + Math.cos(mid) * r;
+              const y = arc.y + Math.sin(mid) * r;
+              const percent = ((value / total) * 100).toFixed(1) + '%';
+              // If slice is too small, skip drawing to avoid overlap
+              const sliceAngle = end - start;
+              if (sliceAngle < 0.25) return; // ~14 degrees
+              ctx.fillText(percent, x, y);
+            });
+            ctx.restore();
+          }
+        };
+
         if (statusPie) statusPie.destroy();
         statusPie = new Chart(statusCtx, {
           type: "pie",
@@ -990,11 +1023,17 @@
           options: {
             responsive: true,
             maintainAspectRatio: false,
+            layout: {
+              padding: {
+                right: 10
+              }
+            },
             plugins: {
               legend: {
-                position: "bottom",
+                position: "right",
+                align: 'center',
                 labels: {
-                  padding: 20,
+                  padding: 10,
                 },
               },
               tooltip: {
@@ -1014,6 +1053,7 @@
               },
             },
           },
+          plugins: [piePercentPlugin]
         });
       }
 
