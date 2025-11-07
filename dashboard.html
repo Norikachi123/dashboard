@@ -1,0 +1,761 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Bảng Điều Khiển Quản Lý Đơn Hàng</title>
+
+  <!-- Tailwind CDN (for quick dev; remove in production and use compiled Tailwind) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Lucide icons (web component) -->
+  <script type="module" src="https://cdn.jsdelivr.net/npm/lucide@0.278.0/dist/lucide.min.js"></script>
+
+  <style>
+    /* small tweaks */
+    .chart-container { 
+      width:100%; 
+      height:300px;
+
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-gray-50">
+
+  <!-- Header -->
+  <div class="bg-white shadow-sm border-b">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <h1 class="text-2xl font-bold text-gray-900">Báo cáo thống kê tổng quan</h1>
+      <p class="text-sm text-gray-600 mt-1">Demo</p>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <!-- Filter Bar -->
+    <div class="flex flex-wrap items-center gap-4 mb-4">
+      <label class="font-medium text-gray-700">Lọc theo:</label>
+      <select id="filterType" class="border rounded px-2 py-1">
+        <option value="ngay">Ngày</option>
+        <option value="thang">Tháng</option>
+        <option value="quy">Quý</option>
+        <option value="nam">Năm</option>
+      </select>
+      <input id="filterInput" type="date" class="border rounded px-2 py-1" />
+      <input id="filterMonth" type="month" class="border rounded px-2 py-1 hidden" />
+      <select id="filterQuarter" class="border rounded px-2 py-1 hidden">
+        <option value="1">Quý 1</option>
+        <option value="2">Quý 2</option>
+        <option value="3">Quý 3</option>
+        <option value="4">Quý 4</option>
+      </select>
+      <input id="filterYear" type="number" min="2000" max="2100" class="border rounded px-2 py-1 hidden" placeholder="Năm" />
+      <button id="filterBtn" class="bg-blue-500 text-white px-3 py-1 rounded">Lọc</button>
+      <button id="clearFilterBtn" class="bg-gray-200 text-gray-700 px-3 py-1 rounded">Bỏ lọc</button>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-gray-600 font-bold">Tổng đơn hàng</p>
+            <p id="totalOrders" class="text-2xl font-bold text-gray-900 mt-1">0</p>
+          </div>
+          <i data-lucide="package" class="w-10 h-10 text-blue-500"></i>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-gray-600 font-bold">Tổng tiền</p>
+            <p id="totalRevenue" class="text-2xl font-bold text-gray-900 mt-1">₫0</p>
+          </div>
+          <i data-lucide="trending-up" class="w-10 h-10 text-green-500"></i>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-gray-600 font-bold">Đã thu</p>
+            <p id="totalPaid" class="text-2xl font-bold text-gray-900 mt-1">₫0</p>
+          </div>
+          <i data-lucide="dollar-sign" class="w-10 h-10 text-blue-500"></i>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-gray-600 font-bold">Công nợ</p>
+            <p id="totalDebt" class="text-2xl font-bold text-red-600 mt-1">₫0</p>
+          </div>
+          <i data-lucide="alert-circle" class="w-10 h-10 text-red-500"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-6">
+      <div class="bg-white rounded-lg shadow p-6 lg:col-span-2">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Trạng thái đơn hàng</h3>
+        <div class="chart-container">
+          <canvas id="statusPie" style="transform: translateX(40%)"></canvas>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow p-6 lg:col-span-3">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Doanh thu theo khách hàng (Triệu VNĐ)</h3>
+        <div class="chart-container">
+          <canvas id="revenueBar"></canvas>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Comparative Chart -->
+    <div class="mb-6">
+      <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">So sánh số đơn và doanh thu</h3>
+        <div class="chart-container" style="height: 200px">
+          <canvas id="comparativeBar"></canvas>
+        </div>
+      </div>
+    </div>    <!-- Tabs -->
+    <div class="bg-white rounded-lg shadow mb-6">
+      <div class="border-b border-gray-200">
+        <nav class="flex space-x-8 px-6" aria-label="Tabs">
+          <button id="tab-overview" class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center border-blue-500 text-blue-600">
+            <i data-lucide="file-text" class="w-4 h-4 mr-2"></i>Tổng quan đơn hàng
+          </button>
+          <button id="tab-customers" class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center text-gray-500 hover:text-gray-700 hover:border-gray-300">
+            <i data-lucide="user" class="w-4 h-4 mr-2"></i>Khách hàng
+          </button>
+          <button id="tab-carriers" class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center text-gray-500 hover:text-gray-700 hover:border-gray-300">
+            <i data-lucide="truck" class="w-4 h-4 mr-2"></i>Nhà xe
+          </button>
+        </nav>
+      </div>
+
+      <div id="view-overview" class="p-6">
+        <h2 class="text-xl font-semibold text-gray-900 mb-4">Danh sách đơn hàng</h2>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STT</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mã đơn hàng</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Khách hàng</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mã giao dịch</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ngày thanh toán</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ngày nhận đơn</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ngày vận chuyển</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ngày hoàn tất</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="ordersTable" class="bg-white divide-y divide-gray-200"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="view-order-details" class="p-6 hidden">
+        <div class="mb-4">
+          <button id="back-to-overview" class="text-blue-600 hover:text-blue-900 text-sm">← Quay lại danh sách đơn hàng</button>
+        </div>
+        <h2 id="order-details-title" class="text-xl font-semibold text-gray-900 mb-4">Chi tiết đơn hàng</h2>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mã nhà xe</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Số Container</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kích cỡ</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Loại container</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trọng lượng</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hàng hoá</th>
+              </tr>
+            </thead>
+            <tbody id="orderDetailsTable" class="bg-white divide-y divide-gray-200"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="view-customers" class="p-6 hidden">
+        <h2 class="text-xl font-semibold text-gray-900 mb-4">Danh sách khách hàng</h2>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Khách hàng</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SL đơn hàng</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Số tiền</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Đã thu</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Công nợ</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="customersTable" class="bg-white divide-y divide-gray-200"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="view-customer-orders" class="p-6 hidden">
+        <div class="mb-4">
+          <button id="back-to-customers" class="text-blue-600 hover:text-blue-900 text-sm">← Quay lại danh sách khách hàng</button>
+        </div>
+        <h2 id="customer-orders-title" class="text-xl font-semibold text-gray-900 mb-4">Đơn hàng của:</h2>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STT</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mã đơn hàng</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Số tiền</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Đã thu</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Công nợ</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ngày nhận đơn</th>
+              </tr>
+            </thead>
+              <tbody id="customerOrdersTable" class="bg-white divide-y divide-gray-200"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="view-carriers" class="p-6 hidden">
+        <h2 class="text-xl font-semibold text-gray-900 mb-4">Danh sách nhà xe</h2>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mã nhà xe</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên nhà xe</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Số Rơmoóc</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tài xế</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Loại dịch vụ</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="carriersTable" class="bg-white divide-y divide-gray-200"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="view-carrier-orders" class="p-6 hidden">
+        <div class="mb-4">
+          <button id="back-to-carriers" class="text-blue-600 hover:text-blue-900 text-sm">← Quay lại danh sách nhà xe</button>
+        </div>
+        <h2 id="carrier-orders-title" class="text-xl font-semibold text-gray-900 mb-4">Đơn hàng của nhà xe:</h2>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STT</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mã đơn hàng</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Số Container</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kích cỡ</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Loại</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trọng lượng</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hàng hoá</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Thao tác</th>
+              </tr>
+            </thead>
+              <tbody id="carrierOrdersTable" class="bg-white divide-y divide-gray-200"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+<script>
+  // --- FILTER LOGIC ---
+  let filteredOrders;
+  function applyFilter() {
+    const type = document.getElementById('filterType').value;
+    let result = orders.slice();
+    if (type === 'ngay') {
+      const val = document.getElementById('filterInput').value;
+      if (val) result = result.filter(o => o.receiveDate === val);
+    } else if (type === 'thang') {
+      const val = document.getElementById('filterMonth').value;
+      if (val) result = result.filter(o => o.receiveDate && o.receiveDate.startsWith(val));
+    } else if (type === 'quy') {
+      const q = document.getElementById('filterQuarter').value;
+      const y = document.getElementById('filterYear').value;
+      if (q && y) {
+        result = result.filter(o => {
+          if (!o.receiveDate) return false;
+          const [year, month] = o.receiveDate.split('-');
+          if (year !== y) return false;
+          const m = parseInt(month, 10);
+          if (q == 1) return m >= 1 && m <= 3;
+          if (q == 2) return m >= 4 && m <= 6;
+          if (q == 3) return m >= 7 && m <= 9;
+          if (q == 4) return m >= 10 && m <= 12;
+          return false;
+        });
+      }
+    } else if (type === 'nam') {
+      const y = document.getElementById('filterYear').value;
+      if (y) result = result.filter(o => o.receiveDate && o.receiveDate.startsWith(y + '-'));
+    }
+    filteredOrders = result;
+    renderAll();
+  }
+
+  function clearFilter() {
+    filteredOrders = orders.slice();
+    renderAll();
+  }
+  // --- END FILTER LOGIC ---
+
+  // Move event listeners and initializations to after all variables are defined
+  document.addEventListener('DOMContentLoaded', function() {
+    //filteredOrders = orders.slice();
+    clearFilter()
+    document.getElementById('filterBtn').addEventListener('click', applyFilter);
+    document.getElementById('clearFilterBtn').addEventListener('click', clearFilter);
+    document.getElementById('filterType').addEventListener('change', function() {
+      const t = this.value;
+      document.getElementById('filterInput').classList.toggle('hidden', t !== 'ngay');
+      document.getElementById('filterMonth').classList.toggle('hidden', t !== 'thang');
+      document.getElementById('filterQuarter').classList.toggle('hidden', t !== 'quy');
+      document.getElementById('filterYear').classList.toggle('hidden', t !== 'quy' && t !== 'nam');
+    });
+  });
+  const orders = [
+    { id: 'SLT00001', customer: 'Công ty TNHH ABC', transactionCode: 'TX2024001', status: 'Hoàn tất', paymentDate: '2024-10-15', receiveDate: '2024-10-10', shipDate: '2024-10-12', completeDate: '2024-10-15', amount: 50000000, paid: 50000000 },
+    { id: 'SLT00002', customer: 'Công ty Cổ phần XYZ', transactionCode: 'TX2024002', status: 'Đang vận chuyển', paymentDate: '2024-10-20', receiveDate: '2024-10-18', shipDate: '2024-10-19', completeDate: null, amount: 75000000, paid: 40000000 },
+    { id: 'SLT00003', customer: 'Công ty TNHH ABC', transactionCode: 'TX2024003', status: 'Chờ xử lý', paymentDate: null, receiveDate: '2024-10-22', shipDate: null, completeDate: null, amount: 30000000, paid: 0 },
+    { id: 'SLT00004', customer: 'Doanh nghiệp DEF', transactionCode: 'TX2024004', status: 'Hoàn tất', paymentDate: '2024-10-25', receiveDate: '2024-10-20', shipDate: '2024-10-22', completeDate: '2024-10-25', amount: 90000000, paid: 90000000 },
+    { id: 'SLT00005', customer: 'Công ty Cổ phần XYZ', transactionCode: 'TX2024005', status: 'Đang vận chuyển', paymentDate: '2024-10-28', receiveDate: '2024-10-26', shipDate: '2024-10-27', completeDate: null, amount: 60000000, paid: 30000000 },
+  ];
+
+  const orderDetails = [
+    { orderId: 'SLT00001', carrierId: 'NX001', containerNo: 'TCLU1234567', size: '40ft', type: 'High Cube', weight: '25 tấn', goods: 'Điện tử' },
+    { orderId: 'SLT00002', carrierId: 'NX002', containerNo: 'MSCU7654321', size: '20ft', type: 'Standard', weight: '18 tấn', goods: 'Vải may mặc' },
+    { orderId: 'SLT00003', carrierId: 'NX001', containerNo: 'TCLU9876543', size: '40ft', type: 'Reefer', weight: '22 tấn', goods: 'Thực phẩm đông lạnh' },
+    { orderId: 'SLT00004', carrierId: 'NX003', containerNo: 'HLCU1112233', size: '40ft', type: 'High Cube', weight: '28 tấn', goods: 'Máy móc' },
+    { orderId: 'SLT00005', carrierId: 'NX002', containerNo: 'MSCU4445566', size: '20ft', type: 'Standard', weight: '15 tấn', goods: 'Hàng tiêu dùng' },
+  ];
+
+  const carriers = [
+    { id: 'NX001', name: 'Vận Tải Sài Gòn', trailer: 'RMC-12345', driver: 'Nguyễn Văn A', service: 'Vận chuyển container' },
+    { id: 'NX002', name: 'Vận Tải Miền Nam', trailer: 'RMC-67890', driver: 'Trần Văn B', service: 'Vận chuyển nội địa' },
+    { id: 'NX003', name: 'Vận Tải Hà Nội', trailer: 'RMC-11223', driver: 'Lê Văn C', service: 'Vận chuyển quốc tế' },
+  ];
+
+  // Aggregate customers
+  const customerStats = {};
+  orders.forEach(o => {
+    if (!customerStats[o.customer]) {
+      customerStats[o.customer] = { name: o.customer, orderCount: 0, totalAmount: 0, totalPaid: 0, debt: 0, orders: [] };
+    }
+    customerStats[o.customer].orderCount++;
+    customerStats[o.customer].totalAmount += o.amount;
+    customerStats[o.customer].totalPaid += o.paid;
+    customerStats[o.customer].debt += (o.amount - o.paid);
+    customerStats[o.customer].orders.push(o.id);
+  });
+  const customers = Object.values(customerStats);
+
+  // Utility
+  function formatCurrency(amount) {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+  }
+
+  // Render stats from filteredOrders
+  function renderStats() {
+    const totalOrders = filteredOrders.length;
+    const totalRevenue = filteredOrders.reduce((s,o)=>s+o.amount,0);
+    const totalPaid = filteredOrders.reduce((s,o)=>s+o.paid,0);
+    const totalDebt = totalRevenue - totalPaid;
+    document.getElementById('totalOrders').textContent = totalOrders;
+    document.getElementById('totalRevenue').textContent = formatCurrency(totalRevenue);
+    document.getElementById('totalPaid').textContent = formatCurrency(totalPaid);
+    document.getElementById('totalDebt').textContent = formatCurrency(totalDebt);
+  }
+
+  // Render charts from filteredOrders
+  let statusPie, revenueBar, comparativeBar;
+  function renderCharts() {
+    // Comparative bar chart with normalized values
+    const months = [...new Set(filteredOrders.map(o => o.receiveDate.substring(0, 7)))].sort();
+    const comparativeData = months.map(month => {
+      const monthOrders = filteredOrders.filter(o => o.receiveDate.startsWith(month));
+      return {
+        month,
+        orders: monthOrders.length,
+        revenue: monthOrders.reduce((sum, o) => sum + o.amount, 0) / 1000000 // Convert to millions
+      };
+    });
+
+    // Normalize the data (convert to percentages)
+    const maxOrders = Math.max(...comparativeData.map(d => d.orders));
+    const maxRevenue = Math.max(...comparativeData.map(d => d.revenue));
+
+    const comparativeCtx = document.getElementById('comparativeBar').getContext('2d');
+    if (comparativeBar) comparativeBar.destroy();
+    comparativeBar = new Chart(comparativeCtx, {
+      type: 'bar',
+      data: {
+        labels: comparativeData.map(d => d.month),
+        datasets: [
+          {
+            label: 'Số đơn hàng',
+            data: comparativeData.map(d => (d.orders / maxOrders) * 100),
+            backgroundColor: '#3B82F6',
+            yAxisID: 'percentage'
+          },
+          {
+            label: 'Doanh thu',
+            data: comparativeData.map(d => (d.revenue / maxRevenue) * 100),
+            backgroundColor: '#10B981',
+            yAxisID: 'percentage'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          percentage: {
+            type: 'linear',
+            position: 'left',
+            beginAtZero: true,
+            max: 100,
+            ticks: {
+              callback: value => value + '%'
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            position: 'bottom'
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const dataIndex = context.dataIndex;
+                const datasetIndex = context.datasetIndex;
+                const rawData = comparativeData[dataIndex];
+                if (datasetIndex === 0) {
+                  return `Số đơn hàng: ${rawData.orders} (${context.raw.toFixed(1)}%)`;
+                } else {
+                  return `Doanh thu: ${rawData.revenue.toFixed(1)}M VNĐ (${context.raw.toFixed(1)}%)`;
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // Pie chart
+    const statusCounts = {
+      'Hoàn tất': filteredOrders.filter(o=>o.status==='Hoàn tất').length,
+      'Đang vận chuyển': filteredOrders.filter(o=>o.status==='Đang vận chuyển').length,
+      'Chờ xử lý': filteredOrders.filter(o=>o.status==='Chờ xử lý').length
+    };
+    const statusColors = {
+      'Hoàn tất': '#10b981',
+      'Đang vận chuyển': '#3b82f6',
+      'Chờ xử lý': '#f59e0b'
+    };
+    const statusCtx = document.getElementById('statusPie').getContext('2d');
+    if (statusPie) statusPie.destroy();
+    statusPie = new Chart(statusCtx, {
+      type: 'pie',
+      data: {
+        labels: Object.keys(statusCounts),
+        datasets: [{
+          data: Object.values(statusCounts),
+          backgroundColor: Object.keys(statusCounts).map(k => statusColors[k])
+        }]
+      },
+      options: {
+        plugins: { legend: { position: 'bottom' } }
+      }
+    });
+
+    // Revenue bar chart - by customer (in million VND)
+    // Recompute customer stats from filteredOrders
+    const customerStats = {};
+    filteredOrders.forEach(o => {
+      if (!customerStats[o.customer]) {
+        customerStats[o.customer] = { name: o.customer, totalPaid: 0, debt: 0, totalAmount: 0 };
+      }
+      customerStats[o.customer].totalPaid += o.paid;
+      customerStats[o.customer].debt += (o.amount - o.paid);
+      customerStats[o.customer].totalAmount += o.amount;
+    });
+    const revenueData = Object.values(customerStats).map(c => ({ name: c.name.length>20?c.name.slice(0,20)+'...':c.name, paid: c.totalPaid/1000000, debt: c.debt/1000000 }));
+    const revenueCtx = document.getElementById('revenueBar').getContext('2d');
+    if (revenueBar) revenueBar.destroy();
+    revenueBar = new Chart(revenueCtx, {
+      type: 'bar',
+      data: {
+        labels: revenueData.map(r=>r.name),
+        datasets: [
+          { label: 'Đã thu (M)', data: revenueData.map(r=>r.paid), backgroundColor: '#10b981' },
+          { label: 'Công nợ (M)', data: revenueData.map(r=>r.debt), backgroundColor: '#ef4444' }
+        ]
+      },
+      options: {
+        indexAxis: 'x',
+        plugins: { legend: { position: 'bottom' } },
+        scales: {
+          y: { beginAtZero: true }
+        }
+      }
+    });
+  }
+
+  // Populate Orders table from filteredOrders
+  function createStatusBadge(status) {
+    let colorClass = 'bg-gray-100 text-gray-800';
+    if (status === 'Hoàn tất') colorClass = 'bg-green-100 text-green-800';
+    if (status === 'Đang vận chuyển') colorClass = 'bg-blue-100 text-blue-800';
+    if (status === 'Chờ xử lý') colorClass = 'bg-yellow-100 text-yellow-800';
+    return '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ' + colorClass + '">' + status + '</span>';
+  }
+
+  function renderOrdersTable() {
+    const ordersTable = document.getElementById('ordersTable');
+    ordersTable.innerHTML = '';
+    filteredOrders.forEach((order, index) => {
+      const tr = document.createElement('tr');
+      tr.className = 'hover:bg-gray-50';
+      tr.innerHTML = `
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${index + 1}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">${order.id}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${order.customer}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${order.transactionCode}</td>
+        <td class="px-6 py-4 whitespace-nowrap">${createStatusBadge(order.status)}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${order.paymentDate || '-'}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${order.receiveDate}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${order.shipDate || '-'}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${order.completeDate || '-'}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm"><button data-order="${order.id}" class="text-blue-600 hover:text-blue-900 view-order">Chi tiết</button></td>
+      `;
+      ordersTable.appendChild(tr);
+    });
+  }
+
+  // Customers table from filteredOrders
+  function renderCustomersTable() {
+    // Recompute customer stats from filteredOrders
+    const customerStats = {};
+    filteredOrders.forEach(o => {
+      if (!customerStats[o.customer]) {
+        customerStats[o.customer] = { name: o.customer, orderCount: 0, totalAmount: 0, totalPaid: 0, debt: 0, orders: [] };
+      }
+      customerStats[o.customer].orderCount++;
+      customerStats[o.customer].totalAmount += o.amount;
+      customerStats[o.customer].totalPaid += o.paid;
+      customerStats[o.customer].debt += (o.amount - o.paid);
+      customerStats[o.customer].orders.push(o.id);
+    });
+    const customers = Object.values(customerStats);
+    const customersTable = document.getElementById('customersTable');
+    customersTable.innerHTML = '';
+    customers.forEach(c => {
+      const tr = document.createElement('tr');
+      tr.className = 'hover:bg-gray-50';
+      tr.innerHTML = `
+        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${c.name}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${c.orderCount}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(c.totalAmount)}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-green-600">${formatCurrency(c.totalPaid)}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600">${formatCurrency(c.debt)}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm"><button data-customer="${c.name}" class="text-blue-600 hover:text-blue-900 view-customer">Xem đơn hàng</button></td>
+      `;
+      customersTable.appendChild(tr);
+    });
+  }
+
+  // Carriers table (unchanged, since not filtered by date)
+  function renderCarriersTable() {
+    const carriersTable = document.getElementById('carriersTable');
+    carriersTable.innerHTML = '';
+    carriers.forEach(carrier => {
+      const tr = document.createElement('tr');
+      tr.className = 'hover:bg-gray-50';
+      tr.innerHTML = `
+        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">${carrier.id}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${carrier.name}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${carrier.trailer}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${carrier.driver}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${carrier.service}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm"><button data-carrier="${carrier.id}" class="text-blue-600 hover:text-blue-900 view-carrier">Xem đơn hàng</button></td>
+      `;
+      carriersTable.appendChild(tr);
+    });
+  }
+
+  // Click handlers for showing order details
+  document.addEventListener('click', (e) => {
+    const orderId = e.target.dataset.order;
+    if (orderId) {
+      showOrderDetails(orderId);
+    }
+    const customerName = e.target.dataset.customer;
+    if (customerName) {
+      showCustomerOrders(customerName);
+    }
+    const carrierId = e.target.dataset.carrier;
+    if (carrierId) {
+      showCarrierOrders(carrierId);
+    }
+  });
+
+  function showOrderDetails(orderId) {
+    document.getElementById('view-overview').classList.add('hidden');
+    document.getElementById('view-order-details').classList.remove('hidden');
+    document.getElementById('order-details-title').textContent = 'Chi tiết đơn hàng: ' + orderId;
+    const tbody = document.getElementById('orderDetailsTable');
+    tbody.innerHTML = '';
+    orderDetails.filter(d => d.orderId === orderId).forEach(detail => {
+      const tr = document.createElement('tr');
+      tr.className = 'hover:bg-gray-50';
+      tr.innerHTML = `
+        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">${detail.carrierId}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${detail.containerNo}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${detail.size}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${detail.type}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${detail.weight}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${detail.goods}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  document.getElementById('back-to-overview').addEventListener('click', () => {
+    document.getElementById('view-order-details').classList.add('hidden');
+    document.getElementById('view-overview').classList.remove('hidden');
+  });
+
+  // Show customer orders from filteredOrders
+  function showCustomerOrders(customerName) {
+    document.getElementById('view-customers').classList.add('hidden');
+    document.getElementById('view-customer-orders').classList.remove('hidden');
+    document.getElementById('customer-orders-title').textContent = 'Đơn hàng của: ' + customerName;
+    const tbody = document.getElementById('customerOrdersTable');
+    tbody.innerHTML = '';
+    filteredOrders.filter(o => o.customer === customerName).forEach((order, idx) => {
+      const tr = document.createElement('tr');
+      tr.className = 'hover:bg-gray-50';
+      tr.innerHTML = `
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${idx + 1}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">${order.id}</td>
+        <td class="px-6 py-4 whitespace-nowrap">${createStatusBadge(order.status)}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(order.amount)}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-green-600">${formatCurrency(order.paid)}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600">${formatCurrency(order.amount - order.paid)}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${order.receiveDate}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  document.getElementById('back-to-customers').addEventListener('click', () => {
+    document.getElementById('view-customer-orders').classList.add('hidden');
+    document.getElementById('view-customers').classList.remove('hidden');
+  });
+
+  // Show carrier orders from filteredOrders
+  function showCarrierOrders(carrierId) {
+    document.getElementById('view-carriers').classList.add('hidden');
+    document.getElementById('view-carrier-orders').classList.remove('hidden');
+    document.getElementById('carrier-orders-title').textContent = 'Đơn hàng của nhà xe: ' + carrierId;
+    const tbody = document.getElementById('carrierOrdersTable');
+    tbody.innerHTML = '';
+    // Only show orders for this carrier that are in filteredOrders
+    const filteredOrderIds = new Set(filteredOrders.map(o => o.id));
+    orderDetails.filter(d => d.carrierId === carrierId && filteredOrderIds.has(d.orderId)).forEach((detail, idx) => {
+      const tr = document.createElement('tr');
+      tr.className = 'hover:bg-gray-50';
+      tr.innerHTML = `
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${idx + 1}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">${detail.orderId}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${detail.containerNo}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${detail.size}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${detail.type}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${detail.weight}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${detail.goods}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm"><button data-order="${detail.orderId}" class="text-blue-600 hover:text-blue-900 view-order">Chi tiết đơn</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  document.getElementById('back-to-carriers').addEventListener('click', () => {
+    document.getElementById('view-carrier-orders').classList.add('hidden');
+    document.getElementById('view-carriers').classList.remove('hidden');
+  });
+
+  // Tabs switching
+  const tabOverview = document.getElementById('tab-overview');
+  const tabCustomers = document.getElementById('tab-customers');
+  const tabCarriers = document.getElementById('tab-carriers');
+
+  function clearActiveTabs() {
+    document.querySelectorAll('.tab-btn').forEach(b => {
+      b.classList.remove('border-blue-500','text-blue-600');
+      b.classList.add('text-gray-500');
+    });
+    // hide all main views
+    ['view-overview','view-order-details','view-customers','view-customer-orders','view-carriers','view-carrier-orders'].forEach(id => {
+      document.getElementById(id).classList.add('hidden');
+    });
+  }
+
+  tabOverview.addEventListener('click', () => {
+    clearActiveTabs();
+    tabOverview.classList.add('border-blue-500','text-blue-600');
+    document.getElementById('view-overview').classList.remove('hidden');
+    renderAll();
+  });
+
+  tabCustomers.addEventListener('click', () => {
+    clearActiveTabs();
+    tabCustomers.classList.add('border-blue-500','text-blue-600');
+    document.getElementById('view-customers').classList.remove('hidden');
+    renderAll();
+  });
+
+  tabCarriers.addEventListener('click', () => {
+    clearActiveTabs();
+    tabCarriers.classList.add('border-blue-500','text-blue-600');
+    document.getElementById('view-carriers').classList.remove('hidden');
+    renderAll();
+  });
+
+  // Render all filtered views
+  function renderAll() {
+    renderStats();
+    renderOrdersTable();
+    renderCustomersTable();
+    renderCarriersTable();
+    renderCharts();
+  }
+
+  // init default view
+  (function init() {
+    // ensure lucide icons transform
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+      window.lucide.createIcons();
+    }
+    clearActiveTabs();
+    tabOverview.classList.add('border-blue-500','text-blue-600');
+    document.getElementById('view-overview').classList.remove('hidden');
+    renderAll();
+  })();
+
+</script>
+</body>
+</html>
