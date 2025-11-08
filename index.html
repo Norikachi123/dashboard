@@ -169,7 +169,7 @@
             <div class="w-2/3">
               <canvas id="statusPie"></canvas>
             </div>
-            <div id="statusLegend" class="w-1/3 pl-4"></div>
+            <div id="statusLegend" class="w-1/3 pl-4 "></div>
           </div>
         </div>
       </div>
@@ -1047,11 +1047,11 @@
           row.style.gridTemplateColumns = '1fr auto';
           row.style.gap = '8px';
           row.style.alignItems = 'center';
-          row.className = 'py-1';
+          row.className = 'py-1 w-[11rem]';
           row.innerHTML = `
             <div style="display:flex;align-items:center;">
               <span style="width:14px;height:12px;background:${color};display:inline-block;border-radius:3px;margin-right:8px;"></span>
-              <span class="text-sm text-gray-700">${status}</span>
+              <span class="text-xs text-gray-700">${status}</span>
             </div>
             <div style="text-align:right;"><span class="text-sm text-gray-700">${count} đơn</span></div>
           `;
