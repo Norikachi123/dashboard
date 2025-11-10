@@ -544,6 +544,13 @@
                   >
                     Tài Xế
                   </th>
+
+                   <th
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Số Điện Thoại
+                  </th>
+
                   <th
                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
@@ -764,6 +771,7 @@
           name: "Vận Tải Sài Gòn",
           trailer: "RMC-12345",
           driver: "Nguyễn Văn A",
+          phone:"05822122",
           vehicle:"51H-12398",
           service: "Vận chuyển container",
           revenue: 250000000000,
@@ -773,6 +781,7 @@
           name: "Vận Tải Miền Nam",
           trailer: "RMC-67890",
           driver: "Trần Văn B",
+          phone:"01222432",
           vehicle:"11H-14318",
           service: "Vận chuyển nội địa",
           revenue: 500000000,
@@ -782,6 +791,7 @@
           name: "Vận Tải Hà Nội",
           trailer: "RMC-11223",
           driver: "Lê Văn C",
+          phone:"01258943",
           vehicle:"23H-11238",
           service: "Vận chuyển quốc tế",
           revenue: 10000000000,
@@ -1350,6 +1360,9 @@
           }</td>
           <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${
             carrier.driver || "-"
+          }</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${
+            carrier.phone || "-"
           }</td>
           <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${
             carrier.vehicle
