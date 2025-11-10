@@ -463,7 +463,7 @@
                   <th
                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
-                    Biếu cước
+                    Doanh Thu
                   </th>
                   <th
                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
@@ -517,22 +517,12 @@
                   <th
                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
-                    Tên tài xế
-                  </th>
-                  <th
-                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
-                    Số Rơ-moóc
-                  </th>
-                  <th
-                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
                     Số Container
                   </th>
                   <th
                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
-                    Kích cỡ
+                    Kích Cỡ
                   </th>
                   <th
                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
@@ -542,12 +532,27 @@
                   <th
                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
-                    Trọng lượng
+                    Trọng Lượng
                   </th>
                   <th
                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
-                    Hàng hoá
+                    Hàng Hoá
+                  </th>
+                  <th
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Tài Xế
+                  </th>
+                  <th
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Số Xe
+                  </th>
+                  <th
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Số Rơmoóc
                   </th>
                   <!-- <th
                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
@@ -759,24 +764,27 @@
           name: "Vận Tải Sài Gòn",
           trailer: "RMC-12345",
           driver: "Nguyễn Văn A",
+          vehicle:"51H-12398",
           service: "Vận chuyển container",
-          tip: 0,
+          revenue: 250000000000,
         },
         {
           id: "NX002",
           name: "Vận Tải Miền Nam",
           trailer: "RMC-67890",
           driver: "Trần Văn B",
+          vehicle:"11H-14318",
           service: "Vận chuyển nội địa",
-          tip: 250000,
+          revenue: 500000000,
         },
         {
           id: "NX003",
           name: "Vận Tải Hà Nội",
           trailer: "RMC-11223",
           driver: "Lê Văn C",
+          vehicle:"23H-11238",
           service: "Vận chuyển quốc tế",
-          tip: 500000,
+          revenue: 10000000000,
         },
       ];
 
@@ -890,7 +898,7 @@
               legend: {
                 position: "bottom",
               },
-              tooltip: {
+              toolrevenue: {
                 callbacks: {
                   label: function (context) {
                     const dataIndex = context.dataIndex;
@@ -1023,7 +1031,7 @@
             plugins: {
               // hide built-in legend; we'll render an external legend beside the pie
               legend: { display: false },
-              tooltip: {
+              toolrevenue: {
                 callbacks: {
                   label: function (context) {
                     const value = context.raw;
@@ -1188,7 +1196,7 @@
         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">${carrier.id}</td>
         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${carrier.name}</td>
         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(
-          carrier.tip || 0
+          carrier.revenue || 0
         )}</td>
         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${carrier.service}</td>
         <td class="px-6 py-4 whitespace-nowrap text-sm"><button data-carrier="${carrier.id}" class="text-blue-600 hover:text-blue-900 view-carrier">Xem đơn hàng</button></td>
@@ -1316,18 +1324,14 @@
           .forEach((detail, idx) => {
             const tr = document.createElement("tr");
             tr.className = "hover:bg-gray-50";
+            // Cache carrier lookup
+            const carrier = carriers.find((c) => c.id === detail.carrierId) || {};
             tr.innerHTML = `
           <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${
             idx + 1
           }</td>
           <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">${
             detail.orderId
-          }</td>
-          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${
-            carriers.find((c) => c.id === detail.carrierId)?.driver || "-"
-          }</td>
-          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${
-            carriers.find((c) => c.id === detail.carrierId)?.trailer || "-"
           }</td>
           <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${
             detail.containerNo
@@ -1343,6 +1347,15 @@
           }</td>
           <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${
             detail.goods
+          }</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${
+            carrier.driver || "-"
+          }</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${
+            carrier.vehicle
+          }</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${
+            carrier.trailer || "-"
           }</td>
       `;
             tbody.appendChild(tr);
