@@ -17,22 +17,14 @@
       src="https://cdn.jsdelivr.net/npm/lucide@0.278.0/dist/lucide.min.js"
     ></script>
 
-    <style>
-      /* small tweaks */
-      .chart-container {
-        width: 100%;
-        height: 300px;
-      }
-    </style>
-  </head>
-  <body class="min-h-screen bg-gray-50">
-    <!-- Header -->
-    <div class="bg-white shadow-sm border-b">
+                 <div class="bg-white shadow-sm border-b">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <h1 class="text-2xl font-bold text-gray-900">
           Báo cáo thống kê tổng quan
         </h1>
         <p class="text-sm text-gray-600 mt-1">Demo</p>
+      </div>
+    </div>
       </div>
     </div>
 
@@ -131,8 +123,6 @@
 
       <!-- Charts -->
       <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
-        
-
         <div class="bg-white rounded-lg shadow p-6 lg:col-span-2">
           <h3 class="text-lg font-semibold text-gray-900 mb-4">
             Thống kê chi tiết
@@ -169,7 +159,7 @@
             <div class="w-2/3">
               <canvas id="statusPie"></canvas>
             </div>
-            <div id="statusLegend" class="w-1/3 pl-4 "></div>
+            <div id="statusLegend" class="w-1/3 pl-4"></div>
           </div>
         </div>
       </div>
@@ -308,6 +298,8 @@
                   >
                     Số Container
                   </th>
+                 
+                 
                   <th
                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
@@ -471,12 +463,7 @@
                   <th
                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
-                    Số Rơmoóc
-                  </th>
-                  <th
-                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
-                    Tài xế
+                    Biếu cước
                   </th>
                   <th
                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
@@ -530,6 +517,16 @@
                   <th
                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
+                    Tên tài xế
+                  </th>
+                  <th
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Số Rơ-moóc
+                  </th>
+                  <th
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
                     Số Container
                   </th>
                   <th
@@ -552,11 +549,11 @@
                   >
                     Hàng hoá
                   </th>
-                  <th
+                  <!-- <th
                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
                     Thao tác
-                  </th>
+                  </th> -->
                 </tr>
               </thead>
               <tbody
@@ -763,6 +760,7 @@
           trailer: "RMC-12345",
           driver: "Nguyễn Văn A",
           service: "Vận chuyển container",
+          tip: 0,
         },
         {
           id: "NX002",
@@ -770,6 +768,7 @@
           trailer: "RMC-67890",
           driver: "Trần Văn B",
           service: "Vận chuyển nội địa",
+          tip: 250000,
         },
         {
           id: "NX003",
@@ -777,6 +776,7 @@
           trailer: "RMC-11223",
           driver: "Lê Văn C",
           service: "Vận chuyển quốc tế",
+          tip: 500000,
         },
       ];
 
@@ -973,17 +973,17 @@
         const statusCtx = document.getElementById("statusPie").getContext("2d");
         // Plugin to draw percentages inside pie slices
         const piePercentPlugin = {
-          id: 'piePercentPlugin',
+          id: "piePercentPlugin",
           afterDraw: (chart) => {
             const ctx = chart.ctx;
             const dataset = chart.data.datasets[0];
             const meta = chart.getDatasetMeta(0);
             const total = dataset.data.reduce((a, b) => a + b, 0);
             ctx.save();
-            ctx.font = 'bold 12px Arial';
-            ctx.fillStyle = '#ffffff';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
+            ctx.font = "bold 12px Arial";
+            ctx.fillStyle = "#ffffff";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
             meta.data.forEach((arc, i) => {
               const value = dataset.data[i];
               if (!value || total === 0) return;
@@ -993,13 +993,13 @@
               const r = (arc.outerRadius + arc.innerRadius) / 2;
               const x = arc.x + Math.cos(mid) * r;
               const y = arc.y + Math.sin(mid) * r;
-              const percent = ((value / total) * 100).toFixed(1) + '%';
+              const percent = ((value / total) * 100).toFixed(1) + "%";
               const sliceAngle = end - start;
               if (sliceAngle < 0.25) return; // skip very small slices
               ctx.fillText(percent, x, y);
             });
             ctx.restore();
-          }
+          },
         };
 
         if (statusPie) statusPie.destroy();
@@ -1010,7 +1010,9 @@
             datasets: [
               {
                 data: Object.values(statusCounts),
-                backgroundColor: Object.keys(statusCounts).map((k) => statusColors[k]),
+                backgroundColor: Object.keys(statusCounts).map(
+                  (k) => statusColors[k]
+                ),
               },
             ],
           },
@@ -1025,7 +1027,10 @@
                 callbacks: {
                   label: function (context) {
                     const value = context.raw;
-                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                    const total = context.dataset.data.reduce(
+                      (a, b) => a + b,
+                      0
+                    );
                     const percentage = ((value / total) * 100).toFixed(1);
                     return `${context.label}: ${value} đơn`;
                   },
@@ -1033,21 +1038,24 @@
               },
             },
           },
-          plugins: [piePercentPlugin]
+          plugins: [piePercentPlugin],
         });
 
         // Build an external legend next to the pie, using CSS grid so counts align vertically
-        const legendContainer = document.getElementById('statusLegend');
-        legendContainer.innerHTML = '';
+        const legendContainer = document.getElementById("statusLegend");
+        legendContainer.innerHTML = "";
         Object.entries(statusCounts).forEach(([status, count]) => {
-          const percent = totalOrders === 0 ? '0.0' : ((count / totalOrders) * 100).toFixed(1);
-          const color = statusColors[status] || '#ccc';
-          const row = document.createElement('div');
-          row.style.display = 'grid';
-          row.style.gridTemplateColumns = '1fr auto';
-          row.style.gap = '8px';
-          row.style.alignItems = 'center';
-          row.className = 'py-1 w-[11rem]';
+          const percent =
+            totalOrders === 0
+              ? "0.0"
+              : ((count / totalOrders) * 100).toFixed(1);
+          const color = statusColors[status] || "#ccc";
+          const row = document.createElement("div");
+          row.style.display = "grid";
+          row.style.gridTemplateColumns = "1fr auto";
+          row.style.gap = "8px";
+          row.style.alignItems = "center";
+          row.className = "py-1 w-[11rem]";
           row.innerHTML = `
             <div style="display:flex;align-items:center;">
               <span style="width:14px;height:12px;background:${color};display:inline-block;border-radius:3px;margin-right:8px;"></span>
@@ -1179,11 +1187,12 @@
           tr.innerHTML = `
         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">${carrier.id}</td>
         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${carrier.name}</td>
-        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${carrier.trailer}</td>
-        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${carrier.driver}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(
+          carrier.tip || 0
+        )}</td>
         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${carrier.service}</td>
         <td class="px-6 py-4 whitespace-nowrap text-sm"><button data-carrier="${carrier.id}" class="text-blue-600 hover:text-blue-900 view-carrier">Xem đơn hàng</button></td>
-      `;
+          `;
           carriersTable.appendChild(tr);
         });
       }
@@ -1308,30 +1317,33 @@
             const tr = document.createElement("tr");
             tr.className = "hover:bg-gray-50";
             tr.innerHTML = `
-        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${
-          idx + 1
-        }</td>
-        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">${
-          detail.orderId
-        }</td>
-        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${
-          detail.containerNo
-        }</td>
-        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${
-          detail.size
-        }</td>
-        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${
-          detail.type
-        }</td>
-        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${
-          detail.weight
-        }</td>
-        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${
-          detail.goods
-        }</td>
-        <td class="px-6 py-4 whitespace-nowrap text-sm"><button data-order="${
-          detail.orderId
-        }" class="text-blue-600 hover:text-blue-900 view-order">Chi tiết đơn</button></td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${
+            idx + 1
+          }</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">${
+            detail.orderId
+          }</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${
+            carriers.find((c) => c.id === detail.carrierId)?.driver || "-"
+          }</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${
+            carriers.find((c) => c.id === detail.carrierId)?.trailer || "-"
+          }</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${
+            detail.containerNo
+          }</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${
+            detail.size
+          }</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${
+            detail.type
+          }</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${
+            detail.weight
+          }</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${
+            detail.goods
+          }</td>
       `;
             tbody.appendChild(tr);
           });
