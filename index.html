@@ -258,13 +258,27 @@
                   <th
                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
-                    Số lượng container
+                    Số Container
                   </th>
-
                   <th
                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
-                    Thao tác
+                    Kích cỡ
+                  </th>
+                  <th
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Loại
+                  </th>
+                  <th
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Trọng lượng
+                  </th>
+                  <th
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Hàng hoá
                   </th>
                 </tr>
               </thead>
@@ -1194,46 +1208,74 @@
           return { order, containerCount };
         });
 
-        // Render sorted orders
+        // Render sorted orders with container-aware layout.
+        // For orders with a single container: render one row combining order and container details.
+        // For orders with multiple containers: render one leading row with order info + first container,
+        // then render additional rows for remaining containers (order-level cells left blank for visual grouping).
         ordersWithCounts.forEach(({ order, containerCount }, index) => {
-          const tr = document.createElement("tr");
-          tr.className = "hover:bg-gray-50";
-          tr.innerHTML = `
-        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${
-          index + 1
-        }</td>
-        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">${
-          order.id
-        }</td>
-        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${
-          order.customer
-        }</td>
-        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${
-          order.transactionCode
-        }</td>
-        <td class="px-6 py-4 whitespace-nowrap">${createStatusBadge(
-          order.status
-        )}</td>
-        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${
-          order.paymentDate || "-"
-        }</td>
-        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${
-          order.receiveDate
-        }</td>
-        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${
-          order.shipDate || "-"
-        }</td>
-        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${
-          order.completeDate || "-"
-        }</td>
-        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${
-          containerCount
-        } Container</td>
-        <td class="px-6 py-4 whitespace-nowrap text-sm"><button data-order="${
-          order.id
-        }" class="text-blue-600 hover:text-blue-900 view-order">Chi tiết</button></td>
+          const containers = orderDetails.filter((d) => d.orderId === order.id);
+          if (containerCount <= 1) {
+            // Single-container order: pick the only container (or placeholder)
+            const c = containers[0] || {};
+            const tr = document.createElement("tr");
+            tr.className = "hover:bg-gray-50";
+            tr.innerHTML = `
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${index + 1}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">${order.id}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${order.customer}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${order.transactionCode}</td>
+        <td class="px-6 py-4 whitespace-nowrap">${createStatusBadge(order.status)}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${order.paymentDate || "-"}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${order.receiveDate}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${order.shipDate || "-"}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${order.completeDate || "-"}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${c.containerNo || "-"}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${c.size || "-"}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${c.type || "-"}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${c.weight || "-"}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${c.goods || "-"}</td>
       `;
-          ordersTable.appendChild(tr);
+            ordersTable.appendChild(tr);
+          } else {
+            // Multi-container: render first container row with order info
+            const first = containers[0];
+            // Multi-container: create first row with order-level cells that span the number of containers
+            const rowspan = containers.length;
+            const trFirst = document.createElement("tr");
+            trFirst.className = "hover:bg-gray-50";
+            trFirst.innerHTML = `
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" rowspan="${rowspan}">${index + 1}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600" rowspan="${rowspan}">${order.id}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900" rowspan="${rowspan}">${order.customer}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" rowspan="${rowspan}">${order.transactionCode}</td>
+        <td class="px-6 py-4 whitespace-nowrap" rowspan="${rowspan}">${createStatusBadge(order.status)}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" rowspan="${rowspan}">${order.paymentDate || "-"}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" rowspan="${rowspan}">${order.receiveDate}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" rowspan="${rowspan}">${order.shipDate || "-"}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" rowspan="${rowspan}">${order.completeDate || "-"}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${first.containerNo || "-"}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${first.size || "-"}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${first.type || "-"}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${first.weight || "-"}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${first.goods || "-"}</td>
+      `;
+            ordersTable.appendChild(trFirst);
+
+            // Render remaining container rows containing only container-level cells
+            for (let i = 1; i < containers.length; i++) {
+              const c = containers[i];
+              const tr = document.createElement("tr");
+              tr.className = "hover:bg-gray-50 bg-gray-50/40";
+              tr.innerHTML = `
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${c.containerNo || "-"}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${c.size || "-"}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${c.type || "-"}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${c.weight || "-"}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${c.goods || "-"}</td>
+      `;
+              ordersTable.appendChild(tr);
+            }
+          }
         });
       }
 
