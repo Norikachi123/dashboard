@@ -254,6 +254,13 @@
                   >
                     Ngày hoàn tất
                   </th>
+
+                  <th
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Số lượng container
+                  </th>
+
                   <th
                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
@@ -728,6 +735,15 @@
           goods: "Điện tử",
         },
         {
+          orderId: "SLT00001",
+          carrierId: "NX001",
+          containerNo: "MAEU1298431",
+          size: "20ft",
+          type: "Standard",
+          weight: "30 tấn",
+          goods: "Bách hoá",
+        },
+        {
           orderId: "SLT00002",
           carrierId: "NX002",
           containerNo: "MSCU7654321",
@@ -765,12 +781,74 @@
         },
       ];
 
+      // Add deterministic recycled mock containers re-using existing orderId and carrierId
+      (function addRecycledMocks() {
+        const extra = [
+          {
+            orderId: "SLT00001",
+            carrierId: "NX001",
+            containerNo: "TCLU0001001",
+            size: "20ft",
+            type: "Standard",
+            weight: "12 tấn",
+            goods: "Đồ gia dụng",
+          },
+          {
+            orderId: "SLT00001",
+            carrierId: "NX001",
+            containerNo: "TCLU0001002",
+            size: "40ft",
+            type: "High Cube",
+            weight: "26 tấn",
+            goods: "Đồ điện tử",
+          },
+          {
+            orderId: "SLT00002",
+            carrierId: "NX002",
+            containerNo: "MSCU0002001",
+            size: "20ft",
+            type: "Standard",
+            weight: "16 tấn",
+            goods: "Vải vóc",
+          },
+          {
+            orderId: "SLT00002",
+            carrierId: "NX002",
+            containerNo: "MSCU0002002",
+            size: "40ft",
+            type: "Standard",
+            weight: "20 tấn",
+            goods: "Hàng tiêu dùng",
+          },
+          {
+            orderId: "SLT00003",
+            carrierId: "NX001",
+            containerNo: "TCLU0003001",
+            size: "40ft",
+            type: "Reefer",
+            weight: "22 tấn",
+            goods: "Nông sản",
+          },
+          {
+            orderId: "SLT00005",
+            carrierId: "NX002",
+            containerNo: "MSCU0005001",
+            size: "20ft",
+            type: "Standard",
+            weight: "14 tấn",
+            goods: "Hàng tiêu dùng",
+          },
+        ];
+        extra.forEach((e) => orderDetails.push(e));
+      })();
+
       const carriers = [
         {
           id: "NX001",
           name: "Vận Tải Sài Gòn",
           trailer: "RMC-12345",
           driver: "Nguyễn Văn A",
+          drivers: ["Nguyễn Văn A", "Phạm Văn D", "Trần Thị E", "Tom" ,"Johnny"],
           phone:"05822122",
           vehicle:"51H-12398",
           service: "Vận chuyển container",
@@ -781,6 +859,7 @@
           name: "Vận Tải Miền Nam",
           trailer: "RMC-67890",
           driver: "Trần Văn B",
+          drivers: ["Trần Văn B", "Lê Thị F", "Hoàng Văn G", "Mary", "George"],
           phone:"01222432",
           vehicle:"11H-14318",
           service: "Vận chuyển nội địa",
@@ -791,6 +870,7 @@
           name: "Vận Tải Hà Nội",
           trailer: "RMC-11223",
           driver: "Lê Văn C",
+          drivers: ["Lê Văn C", "Võ Thị H", "Ngô Văn I", "Brady"],
           phone:"01258943",
           vehicle:"23H-11238",
           service: "Vận chuyển quốc tế",
@@ -1105,7 +1185,17 @@
       function renderOrdersTable() {
         const ordersTable = document.getElementById("ordersTable");
         ordersTable.innerHTML = "";
-        filteredOrders.forEach((order, index) => {
+
+        // Build array with container counts for each order
+        const ordersWithCounts = filteredOrders.map((order) => {
+          const containerCount = orderDetails.filter(
+            (d) => d.orderId === order.id
+          ).length;
+          return { order, containerCount };
+        });
+
+        // Render sorted orders
+        ordersWithCounts.forEach(({ order, containerCount }, index) => {
           const tr = document.createElement("tr");
           tr.className = "hover:bg-gray-50";
           tr.innerHTML = `
@@ -1136,6 +1226,9 @@
         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${
           order.completeDate || "-"
         }</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${
+          containerCount
+        } Container</td>
         <td class="px-6 py-4 whitespace-nowrap text-sm"><button data-order="${
           order.id
         }" class="text-blue-600 hover:text-blue-900 view-order">Chi tiết</button></td>
@@ -1359,7 +1452,10 @@
             detail.goods
           }</td>
           <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${
-            carrier.driver || "-"
+            // choose a random driver from `drivers` if present so each row can show a different driver
+            (carrier.drivers && carrier.drivers.length)
+              ? carrier.drivers[Math.floor(Math.random() * carrier.drivers.length)]
+              : (carrier.driver || "-")
           }</td>
           <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${
             carrier.phone || "-"
